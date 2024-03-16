@@ -6,4 +6,8 @@ interface Event {
   properties?: { [key: string]: any };
 }
 
-export const registerEvent = (event: Event) => apiClient.post("/events", event);
+export const registerEvent = (event: Event) => {
+  try {
+    apiClient.post("/events", event);
+  } catch (error) {}
+};
