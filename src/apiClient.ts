@@ -1,6 +1,5 @@
 import axios from "axios";
 
-// @ts-ignore
 const projectId = window.cdpProjectId;
 
 const apiClient = axios.create({
