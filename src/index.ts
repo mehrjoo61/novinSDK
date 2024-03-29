@@ -1,6 +1,7 @@
 import { io } from "socket.io-client";
 import cookieStorage from "./cookieStorage";
 import { registerEvent } from "./events";
+import notification from "./notification";
 import { generateId } from "./utils";
 
 declare global {
@@ -8,12 +9,6 @@ declare global {
     cdpProjectId?: string;
   }
 }
-
-// function showNotification(title: string, options?: NotificationOptions) {
-//   Notification.requestPermission().then(() => {
-//     if (Notification.permission === "granted") new Notification(title, options);
-//   });
-// }
 
 if (window.cdpProjectId) {
   const key = "cdp_user_id";
@@ -30,10 +25,15 @@ if (window.cdpProjectId) {
     properties: { pageUrl: window.location.href },
   });
 
-  io(process.env.API_URL!, {
+  const socket = io(process.env.API_URL!, {
     query: {
       projectId: window.cdpProjectId,
       userId: cookieStorage.getCookieValue(key),
+      currentPage: window.location.href,
     },
+  });
+
+  socket.on("notify", (data) => {
+    notification.showNotification(data.title, { body: data.body });
   });
 }
