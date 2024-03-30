@@ -39,6 +39,7 @@ if (window.cdpProjectId) {
   });
 
   window.addEventListener("urlchangeevent", async (e) => {
+    console.log(e.newURL?.href);
     socket.emit("navigate", { url: e.newURL?.href });
   });
 }
