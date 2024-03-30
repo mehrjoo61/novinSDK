@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import "url-change-event";
 import cookieStorage from "./cookieStorage";
 import { registerEvent } from "./events";
 import notification from "./notification";
@@ -35,5 +36,9 @@ if (window.cdpProjectId) {
 
   socket.on("notify", (data) => {
     notification.showNotification(data.title, { body: data.body });
+  });
+
+  window.addEventListener("urlchangeevent", async (e) => {
+    socket.emit("navigate", { url: e.newURL?.href });
   });
 }
