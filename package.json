@@ -17,8 +17,6 @@
     "webpack-merge": "^5.10.0"
   },
   "dependencies": {
-    "axios": "^1.6.7",
-    "socket.io-client": "^4.7.5",
-    "url-change-event": "^0.1.7"
+    "axios": "^1.6.8"
   }
 }
