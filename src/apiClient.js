@@ -11,7 +11,7 @@ function getCookieValue(key) {
   }
 }
 
-
+// const localTest = true;
 apiClient = axios.create({
   //baseURL: 'http://localhost:3000/api', // Your API base URL   
   baseURL: 'https://cdp.novin.marketing/api',
@@ -20,15 +20,24 @@ apiClient = axios.create({
 
 let projectId;
 let body;
+let novinAB;
 function initializeProjectId(novinProjectId){
+  novinAB =  getCookieValue("novin-AB");
+  // if(localTest)
+  //   novinAB="A";
   projectId = novinProjectId;
-  body = {"projectId": projectId,"origin": window.location.hostname};
+  body = {
+    "projectId": projectId,
+    "novinAB": {
+      "value": novinAB
+    }
+  };
 }
 
 
 async function postAnonymousUser() {
   try {
-    console.log("projectId: ",projectId);
+    //console.log("body: ", body);
     const response = await apiClient.post('/users/anonymousUser', body);
     return response.data;
   } catch (error) {
@@ -38,10 +47,11 @@ async function postAnonymousUser() {
 }
 
 
-
 async function getUser() {
   try {
-    const anonymous_id_cookie = "novin_anonymous_id";
+    const anonymous_id_cookie = "novinAnonymousId";
+    //const response = await apiClient.post('/users/getUser/6638e243e8a67bf19a6239e1', body);
+    // console.log(response.data.userId);
     const response = await apiClient.post('/users/getUser/' + getCookieValue(anonymous_id_cookie), body);
     return response.data;
   } catch (error) {
@@ -51,12 +61,10 @@ async function getUser() {
 }
 
 
-
-
 async function getUserId() {
   try {
     const response = await getUser();
-    return response.data.userId? response.data.userId: null;
+    return response.userId !== undefined? response.userId: null;
   } catch (error) {
     console.error('Error:', error.message);
     throw error;
@@ -74,8 +82,13 @@ async function isIdentified() {
 }
 
 function getAnonymousId() {
-  const anonymous_id_cookie = "novin_anonymous_id"; 
+  const anonymous_id_cookie = "novinAnonymousId"; 
   return getCookieValue(anonymous_id_cookie);
+}
+
+function getABType() {
+  const novinAB = "novin-AB"; 
+  return getCookieValue(novinAB);
 }
 
 async function isaAccessibe() {
@@ -94,16 +107,33 @@ async function isaAccessibe() {
 
   async function setAttributes(userBody) {
     try {
-      const anonymous_id_cookie = "novin_anonymous_id";
+      const anonymous_id_cookie = "novinAnonymousId";
       if(!userBody.anonymousId)
         userBody.anonymousId = getCookieValue(anonymous_id_cookie);
       if(!userBody.projectId){
         userBody.projectId = projectId;
       }
-      if(!userBody.origin){
-        userBody.origin = window.location.hostname;
-      }
+      // if(!userBody.origin){
+      //   userBody.origin = window.location.hostname;
+      // }
       const response = await apiClient.post('/users/anonymousUser', userBody);
+      return response.data;
+      } catch (error) {
+        console.error('Error:', error.message);
+        throw error;
+    }
+  }
+
+  async function addWebPushToken(userBody) {
+    try {
+      const anonymous_id_cookie = "novinAnonymousId";
+      if(!userBody.userId)
+        userBody.userId = getCookieValue(anonymous_id_cookie);
+      if(!userBody.projectId){
+        userBody.projectId = projectId;
+      }
+      console.log(userBody);
+      const response = await apiClient.post('/users/addWebPushToken', userBody);
       return response.data;
       } catch (error) {
         console.error('Error:', error.message);
@@ -114,16 +144,16 @@ async function isaAccessibe() {
   async function sendEvent(sendBody) {
     try {
 
-      const anonymous_id_cookie = "novin_anonymous_id";
+      const anonymous_id_cookie = "novinAnonymousId";
       if(!sendBody.userId){
         sendBody.userId = getCookieValue(anonymous_id_cookie);
       }
       if(!sendBody.projectId){
         sendBody.projectId = projectId;
       }
-      if(!sendBody.origin){
-        sendBody.origin = window.location.hostname;
-      }
+      // if(!sendBody.origin){
+      //   sendBody.origin = window.location.hostname;
+      // }
       const response = await apiClient.post('/events/send', sendBody);
       return response.data;
       } catch (error) {
@@ -132,6 +162,43 @@ async function isaAccessibe() {
     }
   }
 
+
+
+  async function getFirstEvent(sendBody) {
+    try {
+
+      const anonymous_id_cookie = "novinAnonymousId";
+      if(!sendBody.userId){
+        sendBody.userId = getCookieValue(anonymous_id_cookie);
+      }
+      if(!sendBody.projectId){
+        sendBody.projectId = projectId;
+      }
+      const response = await apiClient.post('/events/getFirstEvent', sendBody);
+      return response.data;
+      } catch (error) {
+        console.error('Error:', error.message);
+        throw error;
+    }
+  }
+
+  async function getLastEvent(sendBody) {
+    try {
+
+      const anonymous_id_cookie = "novinAnonymousId";
+      if(!sendBody.userId){
+        sendBody.userId = getCookieValue(anonymous_id_cookie);
+      }
+      if(!sendBody.projectId){
+        sendBody.projectId = projectId;
+      }
+      const response = await apiClient.post('/events/getLastEvent', sendBody);
+      return response.data;
+      } catch (error) {
+        console.error('Error:', error.message);
+        throw error;
+    }
+  }
 
   async function findByMobile(mobile) {
     try {
@@ -167,5 +234,9 @@ module.exports = {
   findByMobile,
   findByEmail,
   isIdentified,
-  initializeProjectId
+  initializeProjectId,
+  getABType,
+  getFirstEvent,
+  getLastEvent,
+  addWebPushToken
 };

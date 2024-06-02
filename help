@@ -1,0 +1,9 @@
+run both at the same in splite terminal for dev and debug
+
+npm run dev
+npx live-server dist   
+
+del dist
+run npm run build to make sdk at production 
+
+
