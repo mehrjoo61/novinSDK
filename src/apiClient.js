@@ -23,8 +23,7 @@ let body;
 let novinAB;
 function initializeProjectId(novinProjectId){
   novinAB =  getCookieValue("novin-AB");
-  // if(localTest)
-  //   novinAB="A";
+  //console('projectId: ', projectId);
   projectId = novinProjectId;
   body = {
     "projectId": projectId,
@@ -127,8 +126,8 @@ async function isaAccessibe() {
   async function addWebPushToken(userBody) {
     try {
       const anonymous_id_cookie = "novinAnonymousId";
-      if(!userBody.userId)
-        userBody.userId = getCookieValue(anonymous_id_cookie);
+      if(!userBody._id)
+        userBody._id = getCookieValue(anonymous_id_cookie);
       if(!userBody.projectId){
         userBody.projectId = projectId;
       }
@@ -146,11 +145,13 @@ async function isaAccessibe() {
 
       const anonymous_id_cookie = "novinAnonymousId";
       if(!sendBody.userId){
-        sendBody.userId = getCookieValue(anonymous_id_cookie);
+        sendBody.anonymousId = getCookieValue(anonymous_id_cookie);
       }
+      
       if(!sendBody.projectId){
         sendBody.projectId = projectId;
       }
+      console.log("sendBody: ", sendBody);
       // if(!sendBody.origin){
       //   sendBody.origin = window.location.hostname;
       // }

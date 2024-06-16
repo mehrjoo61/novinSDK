@@ -16,6 +16,108 @@ import {
   addWebPushToken
 } from "./apiClient";
 
+const axios = require('axios');
+
+const novinProjectId = getCookieValue('novinProjectId');
+initializeProjectId(novinProjectId);
+await checkAnonymousCookie();
+await checkABCookie();
+await triggerServerSideEvent();
+
+async function triggerServerSideEvent() {
+  try {
+    const baseURL = window.location.origin;
+    const fullPathURL = window.location.href;
+    const ajaxURL = `${baseURL}/stages/v2/wp-admin/admin-ajax.php?action=track_page_view_event`;
+    console.log('fullPathURL: ', fullPathURL);
+    // Send the AJAX request with fullPathURL included in the data payload
+    const res = await axios.post(ajaxURL, { fullPathURL });
+    
+    console.log('Event tracked:', res);
+  } catch (err) {
+    console.log('Error in event tracked:', err.message);
+  }
+}
+
+
+// Dynamically load Firebase scripts
+const loadFirebaseScripts = () => {
+  return new Promise((resolve, reject) => {
+    const firebaseAppScript = document.createElement('script');
+    firebaseAppScript.src = 'https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js';
+    firebaseAppScript.async = true;
+    firebaseAppScript.onload = resolve;
+    firebaseAppScript.onerror = reject;
+    document.head.appendChild(firebaseAppScript);
+  }).then(() => {
+    return new Promise((resolve, reject) => {
+      const firebaseMessagingScript = document.createElement('script');
+      firebaseMessagingScript.src = 'https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js';
+      firebaseMessagingScript.async = true;
+      firebaseMessagingScript.onload = resolve;
+      firebaseMessagingScript.onerror = reject;
+      document.head.appendChild(firebaseMessagingScript);
+    });
+  });
+};
+
+// Initialize Firebase after scripts are loaded
+const initializeFirebase = () => {
+  firebase.initializeApp({
+    apiKey: "AIzaSyC-OiM2fQkAOBIAVPt9N0VV-Jjor9pKAnI",
+    authDomain: "novinmarketing-4a99a.firebaseapp.com",
+    projectId: "novinmarketing-4a99a",
+    storageBucket: "novinmarketing-4a99a.appspot.com",
+    messagingSenderId: "1037825539844",
+    appId: "1:1037825539844:web:7b6691760ec561cc71da51"
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/novinWebPushServiceWorker.js')
+      .then((registration) => {
+        console.log('Service worker registered:', registration);
+        // Wait until the service worker is ready
+        return navigator.serviceWorker.ready;
+      })
+      .then((registration) => {
+        console.log('Service worker is active:', registration);
+        // Get the messaging object
+        const messaging = firebase.messaging();
+        // Request permission for push notifications
+        return Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            console.log("Notification permission granted.");
+            // Get the token
+            return messaging.getToken({ serviceWorkerRegistration: registration });
+          } else {
+            console.log("Notification permission denied.");
+            throw new Error("Notification permission denied.");
+          }
+        });
+      })
+      .then((token) => {
+        if (token) {
+          novin.user.addWebPushToken({
+            "webPushToken": token
+          });
+          console.log("Token:", token);
+        } else {
+          console.log("No token received.");
+        }
+      })
+      .catch((error) => {
+        console.error('Error getting token:', error);
+        novin.user.setAttributes({
+          "optInWebPush": {
+            "value": false
+          }
+        });
+      });
+  } else {
+    console.log('Service workers are not supported in this browser.');
+  }
+};
+
 function hasCookie(key) {
   const cookies = document.cookie.split(';');
   for (let i = 0; i < cookies.length; i++) {
@@ -49,7 +151,7 @@ async function checkAnonymousCookie() {
       const nextYear = new Date(Date.now() + oneYearInMilliseconds);
       //console.log(`${anonymous_id_cookie}=${value}; expires=${nextYear.toUTCString()}; path=/`);
       document.cookie = `${anonymous_id_cookie}=${value}; expires=${nextYear.toUTCString()}; path=/`;
-      //console.log("Cookie novinAnonymousId: " + getCookieValue(anonymous_id_cookie) + " added.");
+      // console.log("Cookie novinAnonymousId: " + getCookieValue(anonymous_id_cookie) + " added.");
     } catch (error) {
       console.error('Error while getting anonymous user from server:', error);
     }
@@ -68,6 +170,18 @@ function generateRandom() {
     return "A";
   } else {
     return "B";
+  }
+}
+
+
+
+async function hasWebPush() {
+  let user = await novin.user.getUser();
+  if (user.webPushTokens && user.webPushTokens.length > 0 && Notification.permission == "granted") {
+    return true;
+  }
+  else {
+    return false;
   }
 }
 
@@ -92,14 +206,14 @@ async function sendPageViewEvent() {
     const anonymous_id_cookie = "novinAnonymousId";
     var properties = {
       "fullUrl": window.location.href,
-      "protocol":window.location.protocol,
+      "protocol": window.location.protocol,
       "hostName": window.location.hostname,
       "pathName": window.location.pathname,
       "search": window.location.search,
-      "hash": window.location.hash 
+      "hash": window.location.hash
     };
     const body = {
-      "userId": getCookieValue(anonymous_id_cookie),
+      "anonymousId": getCookieValue(anonymous_id_cookie),
       "name": "pageView",
       "properties": properties
     };
@@ -116,7 +230,7 @@ async function sendPageViewEvent() {
       const nextYear = new Date(Date.now() + oneYearInMilliseconds);
       document.cookie = `${anonymous_id_cookie}=${value}; expires=${nextYear.toUTCString()}; path=/`;
       await sendEvent(body);
-    
+
     }
 
   } catch (error) {
@@ -170,13 +284,19 @@ async function checkFirstVisitcookie() {
 
 
 global.novin = {
-  init: async function (project) {  // init function is called from the sdk
-    await checkABCookie();
-    initializeProjectId(project.novinProjectId);
-    await checkAnonymousCookie();
-    await sendPageViewEvent();
-    //await checkFirstVisitcookie();
+  // init: async function (project) {  // init function is called from the sdk
+  //   await checkABCookie();
+  //   // initializeProjectId(project.novinProjectId);
+  //   initializeProjectId(novinProjectId);
+  //   await checkAnonymousCookie();
+  //   //await sendPageViewEvent();
+  //   //await checkFirstVisitcookie();
 
+  // },
+  callFirebase: function () {
+    loadFirebaseScripts().then(initializeFirebase).catch((error) => {
+      console.error('Error loading Firebase scripts:', error);
+    });
   },
   getVersion: function () {
     return "1.2.2";
@@ -213,6 +333,9 @@ global.novin = {
     isIdentified: async function () {
       return await isIdentified();
     },
+    hasWebPush: async function () {
+      return await hasWebPush();
+    }
   },
   event: {
     send: async function (body) {
@@ -238,9 +361,25 @@ global.novin = {
       var regex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
       return regex.test(email);
     },
-    validateMobile: function (mobile) {
-      var regex = new RegExp("^(\\+98|0)?9\\d{9}$");
-      return regex.test(mobile);
+    validateMobile: function (mobileNumber) {
+      // Define the regex pattern for the required format
+      var pattern = /^09\d{9}$/;
+
+      // Test the mobile number against the pattern
+      if (pattern.test(mobileNumber)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    validURL: function (str) {
+      var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+        '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
+      return !!pattern.test(str);
     }
   },
 

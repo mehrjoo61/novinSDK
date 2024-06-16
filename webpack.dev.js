@@ -9,11 +9,11 @@ module.exports = merge(common, {
   devtool: "inline-source-map",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "sdk.js",
+    filename: "novinSDK.js",
   },
-  plugins: [
-    new webpack.EnvironmentPlugin({
-      API_URL: "http://localhost:5000",
-    }),
-  ],
+  // plugins: [
+  //   new webpack.EnvironmentPlugin({
+  //     API_URL: "http://localhost:5000",
+  //   }),
+  // ],
 });

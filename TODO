@@ -4,6 +4,6 @@ npm run dev
 npx live-server dist   
 
 del dist
-run npm run build to make sdk at production 
+run "npm run build" to make sdk at production 
 
 

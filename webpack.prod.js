@@ -8,11 +8,11 @@ module.exports = merge(common, {
   mode: "production",
   output: {
     path: path.resolve(__dirname, "./dist/production"),
-    filename: "sdk.js",
+    filename: "novinSDK.js",
   },
-  plugins: [
-    new webpack.EnvironmentPlugin({
-      API_URL: "https://api.cdp.widgeto.ir",
-    }),
-  ],
+  // plugins: [
+  //   new webpack.EnvironmentPlugin({
+  //     API_URL: "https://api.cdp.widgeto.ir",
+  //   }),
+  // ],
 });
