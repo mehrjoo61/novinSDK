@@ -21,10 +21,9 @@ apiClient = axios.create({
 let projectId;
 let body;
 let novinAB;
-function initializeProjectId(novinProjectId){
-  novinAB =  getCookieValue("novin-AB");
-  //console('projectId: ', projectId);
-  projectId = novinProjectId;
+async function initializeProjectId() {
+  novinAB = getCookieValue("novin-AB");
+  projectId = getCookieValue('novinProjectId');
   body = {
     "projectId": projectId,
     "novinAB": {
@@ -36,11 +35,11 @@ function initializeProjectId(novinProjectId){
 
 async function postAnonymousUser() {
   try {
-    //console.log("body: ", body);
-    const response = await apiClient.post('/users/anonymousUser', body);
+    const response = await apiClient.post('/users/anonymousUser', {
+      "projectId": getCookieValue('novinProjectId')});
     return response.data;
   } catch (error) {
-    console.error('Error:', error.message);
+    await axios.post('https://cdp.novin.marketing/api/events/log', { "SDK Error Log: ": "Error postAnonymousUser:" + error.message });
     throw error;
   }
 }
@@ -50,7 +49,6 @@ async function getUser() {
   try {
     const anonymous_id_cookie = "novinAnonymousId";
     //const response = await apiClient.post('/users/getUser/6638e243e8a67bf19a6239e1', body);
-    // console.log(response.data.userId);
     const response = await apiClient.post('/users/getUser/' + getCookieValue(anonymous_id_cookie), body);
     return response.data;
   } catch (error) {
@@ -63,7 +61,7 @@ async function getUser() {
 async function getUserId() {
   try {
     const response = await getUser();
-    return response.userId !== undefined? response.userId: null;
+    return response.userId !== undefined ? response.userId : null;
   } catch (error) {
     console.error('Error:', error.message);
     throw error;
@@ -72,8 +70,8 @@ async function getUserId() {
 
 async function isIdentified() {
   try {
-    const response =await getUser();
-    return response.userId == null? false: true;
+    const response = await getUser();
+    return response.userId == null ? false : true;
   } catch (error) {
     console.error('Error:', error.message);
     throw error;
@@ -81,147 +79,157 @@ async function isIdentified() {
 }
 
 function getAnonymousId() {
-  const anonymous_id_cookie = "novinAnonymousId"; 
+  const anonymous_id_cookie = "novinAnonymousId";
   return getCookieValue(anonymous_id_cookie);
 }
 
 function getABType() {
-  const novinAB = "novin-AB"; 
+  const novinAB = "novin-AB";
   return getCookieValue(novinAB);
 }
 
 async function isaAccessibe() {
-    try {
-      const response =await getUser();
-      if(response.email || response.mobile)
-        return true;
-      else
-        return false;
+  try {
+    const response = await getUser();
+    if (response.email || response.mobile)
+      return true;
+    else
+      return false;
 
-    } catch (error) {
-      console.error('Error:', error.message);
-      throw error;
-    }
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
   }
+}
 
-  async function setAttributes(userBody) {
-    try {
-      const anonymous_id_cookie = "novinAnonymousId";
-      if(!userBody.anonymousId)
-        userBody.anonymousId = getCookieValue(anonymous_id_cookie);
-      if(!userBody.projectId){
-        userBody.projectId = projectId;
-      }
-      // if(!userBody.origin){
-      //   userBody.origin = window.location.hostname;
-      // }
-      const response = await apiClient.post('/users/anonymousUser', userBody);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+async function setAttributes(sendBody) {
+  try {
+    const anonymous_id_cookie = "novinAnonymousId";
+    if (!sendBody.userId) {
+      sendBody.anonymousId = getCookieValue(anonymous_id_cookie);
     }
-  }
 
-  async function addWebPushToken(userBody) {
-    try {
-      const anonymous_id_cookie = "novinAnonymousId";
-      if(!userBody._id)
-        userBody._id = getCookieValue(anonymous_id_cookie);
-      if(!userBody.projectId){
-        userBody.projectId = projectId;
-      }
-      console.log(userBody);
-      const response = await apiClient.post('/users/addWebPushToken', userBody);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+    if (!sendBody.projectId) {
+      sendBody.projectId = projectId;
     }
+
+    const response = await apiClient.post('/users/anonymousUser', sendBody);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
   }
+}
 
-  async function sendEvent(sendBody) {
-    try {
-
-      const anonymous_id_cookie = "novinAnonymousId";
-      if(!sendBody.userId){
-        sendBody.anonymousId = getCookieValue(anonymous_id_cookie);
-      }
-      
-      if(!sendBody.projectId){
-        sendBody.projectId = projectId;
-      }
-      console.log("sendBody: ", sendBody);
-      // if(!sendBody.origin){
-      //   sendBody.origin = window.location.hostname;
-      // }
-      const response = await apiClient.post('/events/send', sendBody);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+async function addWebPushToken(sendBody) {
+  try {
+    const anonymous_id_cookie = "novinAnonymousId";
+    if (!sendBody.userId) {
+      sendBody.anonymousId = getCookieValue(anonymous_id_cookie);
     }
-  }
 
-
-
-  async function getFirstEvent(sendBody) {
-    try {
-
-      const anonymous_id_cookie = "novinAnonymousId";
-      if(!sendBody.userId){
-        sendBody.userId = getCookieValue(anonymous_id_cookie);
-      }
-      if(!sendBody.projectId){
-        sendBody.projectId = projectId;
-      }
-      const response = await apiClient.post('/events/getFirstEvent', sendBody);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+    if (!sendBody.projectId) {
+      sendBody.projectId = projectId;
     }
+    // console.log(userBody);
+    const response = await apiClient.post('/users/addWebPushToken', sendBody);
+    return response.data;
+  } catch (error) {
+    await axios.post('https://cdp.novin.marketing/api/events/log', { "SDK Error Log: ": "Error addWebPushToken:" + error.message });
+    throw error;
   }
+}
 
-  async function getLastEvent(sendBody) {
-    try {
+async function sendEvent(sendBody) {
+  try {
 
-      const anonymous_id_cookie = "novinAnonymousId";
-      if(!sendBody.userId){
-        sendBody.userId = getCookieValue(anonymous_id_cookie);
-      }
-      if(!sendBody.projectId){
-        sendBody.projectId = projectId;
-      }
-      const response = await apiClient.post('/events/getLastEvent', sendBody);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+    const anonymous_id_cookie = "novinAnonymousId";
+    sendBody.anonymousId = getCookieValue(anonymous_id_cookie);
+    if (!sendBody.projectId) {
+      sendBody.projectId = projectId;
     }
+    // console.log("sendBody: ", sendBody);
+    // if(!sendBody.origin){
+    //   sendBody.origin = window.location.hostname;
+    // }
+    const response = await apiClient.post('/events/send', sendBody);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
   }
+}
 
-  async function findByMobile(mobile) {
-    try {
-      //console.log(body);
-      const response = await apiClient.post('/users/findUserByMobile/'+mobile, body);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+
+
+async function getFirstEvent(sendBody) {
+  try {
+
+    const anonymous_id_cookie = "novinAnonymousId";
+    if (!sendBody.userId) {
+      sendBody.userId = getCookieValue(anonymous_id_cookie);
     }
-  }
-
-  async function findByEmail(email) {
-    try {
-      const response = await apiClient.post('/users/findUserByEmail/'+email, body);
-      return response.data;
-      } catch (error) {
-        console.error('Error:', error.message);
-        throw error;
+    if (!sendBody.projectId) {
+      sendBody.projectId = projectId;
     }
+    const response = await apiClient.post('/events/getFirstEvent', sendBody);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
   }
+}
 
+async function getLastEvent(sendBody) {
+  try {
+
+    const anonymous_id_cookie = "novinAnonymousId";
+    if (!sendBody.userId) {
+      sendBody.userId = getCookieValue(anonymous_id_cookie);
+    }
+    if (!sendBody.projectId) {
+      sendBody.projectId = projectId;
+    }
+    const response = await apiClient.post('/events/getLastEvent', sendBody);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
+  }
+}
+
+async function findByMobile(mobile) {
+  try {
+    //console.log(body);
+    const response = await apiClient.post('/users/findUserByMobile/' + mobile, body);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
+  }
+}
+
+async function findByEmail(email) {
+  try {
+    const response = await apiClient.post('/users/findUserByEmail/' + email, body);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
+  }
+}
+
+async function getRecs() {
+  try {
+    body.productsNum = 20;
+    body.anonymousId = getCookieValue("novinAnonymousId");
+    const response = await apiClient.post('/users/getUserRecsFrontEnd', body);
+    return response.data;
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
+  }
+}
 
 
 module.exports = {
@@ -239,5 +247,6 @@ module.exports = {
   getABType,
   getFirstEvent,
   getLastEvent,
-  addWebPushToken
+  addWebPushToken,
+  getRecs
 };

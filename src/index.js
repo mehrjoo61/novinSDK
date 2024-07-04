@@ -13,27 +13,38 @@ import {
   getABType,
   getFirstEvent,
   getLastEvent,
-  addWebPushToken
+  addWebPushToken,
+  getRecs
 } from "./apiClient";
 
 const axios = require('axios');
 
-const novinProjectId = getCookieValue('novinProjectId');
-initializeProjectId(novinProjectId);
+
+
 await checkAnonymousCookie();
 await checkABCookie();
+await initializeProjectId();
 await triggerServerSideEvent();
+
+const sessionCount = handlenovinSessionCount();
+const pageViewCount = handlenovinPageViewCount();
+
+
+const widgetoScript = document.createElement('script');
+widgetoScript.src = 'https://api.popups.fafait.net/popup.js';
+document.body.appendChild(widgetoScript);
+
 
 async function triggerServerSideEvent() {
   try {
     const baseURL = window.location.origin;
     const fullPathURL = window.location.href;
-    const ajaxURL = `${baseURL}/stages/v2/wp-admin/admin-ajax.php?action=track_page_view_event`;
-    console.log('fullPathURL: ', fullPathURL);
+    const ajaxURL = `${baseURL}/wp-admin/admin-ajax.php?action=track_page_view_event`;
+    // console.log('fullPathURL: ', fullPathURL);
     // Send the AJAX request with fullPathURL included in the data payload
     const res = await axios.post(ajaxURL, { fullPathURL });
-    
-    console.log('Event tracked:', res);
+
+    // console.log('Event tracked:', res);
   } catch (err) {
     console.log('Error in event tracked:', err.message);
   }
@@ -106,7 +117,7 @@ const initializeFirebase = () => {
         }
       })
       .catch((error) => {
-        console.error('Error getting token:', error);
+        // console.error('Error getting token:', error);
         novin.user.setAttributes({
           "optInWebPush": {
             "value": false
@@ -146,19 +157,17 @@ async function checkAnonymousCookie() {
     try {
       const anonymousUser = await postAnonymousUser();
       const value = anonymousUser._id;
-      //console.log("anonymousId: ", value);
       const oneYearInMilliseconds = 31536000000; // One year in milliseconds
       const nextYear = new Date(Date.now() + oneYearInMilliseconds);
-      //console.log(`${anonymous_id_cookie}=${value}; expires=${nextYear.toUTCString()}; path=/`);
       document.cookie = `${anonymous_id_cookie}=${value}; expires=${nextYear.toUTCString()}; path=/`;
       // console.log("Cookie novinAnonymousId: " + getCookieValue(anonymous_id_cookie) + " added.");
     } catch (error) {
-      console.error('Error while getting anonymous user from server:', error);
+      await axios.post('https://cdp.novin.marketing/api/events/log', { "SDK Error Log: ": "Error while getting anonymous user from server:" + error });
     }
-  } else {
-    //console.log("anonymous_id_cookie Cookie already exists.");
-  }
 
+  } else {
+    console.log("anonymous_id_cookie Cookie already exists.");
+  }
 }
 
 function generateRandom() {
@@ -282,6 +291,51 @@ async function checkFirstVisitcookie() {
   }
 }
 
+// Cookie utility functions
+function setCookie(name, value, days) {
+  var expires = "";
+  if (days) {
+    var date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+function getCookie(name) {
+  var nameEQ = name + "=";
+  var ca = document.cookie.split(';');
+  for (var i = 0; i < ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function eraseCookie(name) {
+  document.cookie = name + '=; Max-Age=-99999999; path=/';
+}
+function handlenovinSessionCount() {
+  var novinSession = sessionStorage.getItem('novinSession');
+  let sessionCount = parseInt(getCookie('novinSessionCount')) ? parseInt(getCookie('novinSessionCount')) : 0;
+  if (novinSession != 'true') {
+    sessionCount += 1;
+    setCookie('novinSessionCount', sessionCount, 365);
+  }
+  sessionStorage.setItem('novinSession', 'true');
+  return sessionCount;
+}
+
+// Function to handle page view count
+function handlenovinPageViewCount() {
+  const pc = parseInt(getCookie('novinPageCount')) ? parseInt(getCookie('novinPageCount')) : 0;
+  let pageCount = pc + 1;
+  setCookie('novinPageCount', pageCount, 365);
+  return pageCount;
+}
+
+
 
 global.novin = {
   // init: async function (project) {  // init function is called from the sdk
@@ -335,6 +389,9 @@ global.novin = {
     },
     hasWebPush: async function () {
       return await hasWebPush();
+    },
+    getRecs: async function () {
+      return await getRecs();
     }
   },
   event: {
@@ -380,6 +437,21 @@ global.novin = {
         '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
         '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
       return !!pattern.test(str);
+    },
+    setCookie: function (name, value, days) {
+      return setCookie(name, value, days);
+    },
+    getCookie: function (name) {
+      return getCookie(name);
+    },
+    eraseCookie: function (name) {
+      return eraseCookie(name);
+    },
+    sessionCount: function () {
+      return sessionCount;
+    },
+    pageViewCount: function () {
+      return pageViewCount;
     }
   },
 
