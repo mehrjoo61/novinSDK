@@ -217,7 +217,7 @@ async function findByEmail(email) {
     console.error('Error:', error.message);
     throw error;
   }
-}
+} 
 
 async function getRecs() {
   try {
